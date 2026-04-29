@@ -2,9 +2,8 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <title>PyForge Academy</title>
+    <title>PyForge Academy | Pro Editor</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.css" />
     <style>
       body { background-color: #0d1117; margin: 0; padding: 0; }
@@ -16,16 +15,16 @@
     <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.58.0/build/stlite.js"></script>
     <script>
       stlite.mount({
-        requirements: [], 
+        requirements: ["streamlit-ace"], // Re-enabling Ace with specific optimization
         entrypoint: "app.py",
         files: {
           "app.py": `
 import streamlit as st
-import sys, io, time, traceback, re
+import sys, io, time, traceback
 from dataclasses import dataclass
 from curriculum import LESSONS
+from streamlit_ace import st_ace
 
-# ── Safe Wasm Executor ─────────────────────────────
 @dataclass
 class ExecutionResult:
     output: str
@@ -38,88 +37,82 @@ def run_code(code):
     old_out = sys.stdout
     sys.stdout = out
     try:
-        exec(code, {"__name__": "__main__", "print": print})
+        exec(code, {"__name__": "__main__"})
     except Exception:
         err.write(traceback.format_exc())
     finally:
-        sys.stdout = old_out
+        sys.stdout = out if out.getvalue() else old_out
     return ExecutionResult(out.getvalue(), err.getvalue(), time.perf_counter() - start)
 
-# ── App Logic ──────────────────────────────────────
-st.set_page_config(page_title="PyForge Academy", page_icon="🐍", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="PyForge Academy", layout="wide")
 
-# Inject Premium Theme
+# Theme styling
 st.markdown("""<style>
-    :root { --bg-primary: #0d1117; --bg-secondary: #161b22; --accent: #58a6ff; --text: #e6edf3; --border: #30363d; }
-    .main { background-color: var(--bg-primary); color: var(--text); }
-    [data-testid="stSidebar"] { background-color: var(--bg-secondary) !important; border-right: 1px solid var(--border); }
-    .stButton>button { background: linear-gradient(135deg, #1f6feb, #388bfd) !important; color: white !important; border: none; border-radius: 8px; font-weight: 600; }
-    .theory-box { background: #1c2128; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); line-height: 1.7; margin-bottom: 1rem; }
-    .lesson-header { background: linear-gradient(135deg, #161b22, #0d1117); padding: 1.2rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1rem; }
-    .output-panel { background: #000; padding: 1rem; border-radius: 8px; border: 1px solid #333; font-family: 'JetBrains Mono', monospace; margin-top: 1rem; }
-    .sidebar-logo h1 { font-size: 1.2rem; color: var(--accent); margin: 0; }
-    .progress-bar { height: 6px; background: #30363d; border-radius: 3px; margin: 10px 0; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+    .main { background-color: #0d1117; color: #e6edf3; }
+    .stButton>button { background: #58a6ff !important; color: white !important; }
+    .theory-box { background: #161b22; padding: 1.5rem; border-radius: 12px; border: 1px solid #30363d; line-height: 1.6; }
+    .output-panel { background: #000; padding: 1rem; border-radius: 8px; border: 1px solid #333; margin-top: 1rem; }
 </style>""", unsafe_allow_html=True)
 
 if "lsn_idx" not in st.session_state: st.session_state.lsn_idx = 0
 if "done" not in st.session_state: st.session_state.done = set()
-if "sandbox" not in st.session_state: st.session_state.sandbox = "# Welcome to the Sandbox!\\nprint('Hello World')"
 
-def render_sidebar():
-    with st.sidebar:
-        st.markdown('<div class="sidebar-logo"><h1>🐍 PyForge Academy</h1><p style="font-size:0.8rem;color:#8b949e">Mastering Python</p></div>', unsafe_allow_html=True)
-        pct = int(len(st.session_state.done) / len(LESSONS) * 100)
-        st.markdown(f'<div style="font-size:0.8rem">Progress: {len(st.session_state.done)}/{len(LESSONS)}</div><div class="progress-bar"><div class="progress-fill" style="width:{pct}%"></div></div>', unsafe_allow_html=True)
-        st.markdown("---")
-        for i, l in enumerate(LESSONS):
-            icon = "✅ " if i in st.session_state.done else l["icon"] + " "
-            if st.button(f"{icon}{l['title']}", key=f"nav_{i}", use_container_width=True, type="primary" if st.session_state.lsn_idx == i else "secondary"):
-                st.session_state.lsn_idx = i
-                st.rerun()
+# Sidebar
+with st.sidebar:
+    st.title("🐍 PyForge")
+    st.markdown("---")
+    for i, l in enumerate(LESSONS):
+        icon = "✅ " if i in st.session_state.done else l["icon"] + " "
+        if st.button(f"{icon}{l['title']}", key=f"nav_{i}", use_container_width=True, type="primary" if st.session_state.lsn_idx == i else "secondary"):
+            st.session_state.lsn_idx = i
+            st.rerun()
 
-render_sidebar()
+# Tabs
 tab1, tab2 = st.tabs(["📚 Lessons", "🧪 Sandbox"])
 
 with tab1:
     lsn = LESSONS[st.session_state.lsn_idx]
-    st.markdown(f'<div class="lesson-header"><h2>{lsn["icon"]} {lsn["title"]}</h2><p style="color:#8b949e">{lsn["objective"]}</p></div>', unsafe_allow_html=True)
+    st.header(f"{lsn['icon']} {lsn['title']}")
     c1, c2 = st.columns([1, 1])
     with c1:
         st.markdown(f'<div class="theory-box">{lsn["theory"]}</div>', unsafe_allow_html=True)
     with c2:
-        ed_key = f"ed_{lsn['id']}"
-        if ed_key not in st.session_state: st.session_state[ed_key] = lsn["starter_code"]
-        code = st.text_area("Python Editor", value=st.session_state[ed_key], height=350, key=f"ta_{lsn['id']}")
-        if st.button("▶ Run Code"):
+        st.markdown("##### ⌨️ Pro Editor (Tab to Complete)")
+        # THE MAGIC HAPPENS HERE: st_ace with auto_complete=True
+        code = st_ace(
+            value=lsn["starter_code"],
+            language="python",
+            theme="monokai",
+            key=f"ace_{lsn['id']}",
+            height=400,
+            auto_complete=True,
+            font_size=14,
+            tab_size=4
+        )
+        if st.button("▶ Run Code", key=f"run_{lsn['id']}", use_container_width=True):
             res = run_code(code)
-            st.markdown(f'<div class="output-panel"><b style="color:#3fb950">STDOUT:</b><br><pre style="color:white">{res.output}</pre></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="output-panel"><pre style="color:#3fb950">Output:</pre><pre style="color:white">{res.output}</pre></div>', unsafe_allow_html=True)
             if res.error: st.error(res.error)
             if not res.error: st.session_state.done.add(st.session_state.lsn_idx)
 
 with tab2:
-    st.markdown("### 🧪 Sandbox Mode")
-    sb_code = st.text_area("Experiment freely:", value=st.session_state.sandbox, height=400)
-    st.session_state.sandbox = sb_code
-    col_r, col_d = st.columns([1, 1])
-    with col_r:
-        if st.button("▶ Run Sandbox"):
-            res = run_code(sb_code)
-            st.markdown(f'<div class="output-panel"><pre style="color:white">{res.output}</pre></div>', unsafe_allow_html=True)
-            if res.error: st.error(res.error)
-    with col_d:
-        st.download_button("⬇ Download .py", sb_code, file_name="pyforge_script.py")
+    st.markdown("### 🧪 Pro Sandbox")
+    sb_code = st_ace(
+        value="# Experiment freely!\\n# Try typing 'import' or 'print' and hitting Tab",
+        language="python",
+        theme="monokai",
+        key="ace_sandbox",
+        height=500,
+        auto_complete=True
+    )
+    if st.button("▶ Run Sandbox", use_container_width=True):
+        res = run_code(sb_code)
+        st.markdown(f'<div class="output-panel"><pre style="color:white">{res.output}</pre></div>', unsafe_allow_html=True)
 `,
           "curriculum.py": `
 LESSONS = [
-    {"id": "basics", "icon": "🐍", "title": "Python Basics", "objective": "Understand variables and print()", "theory": "Variables are name tags for data.", "starter_code": "name = 'Python'\\nprint(name)"},
-    {"id": "strings", "icon": "📝", "title": "Strings", "objective": "Master text manipulation", "theory": "Strings are sequences of characters.", "starter_code": "text = 'Hello World'\\nprint(text.upper())"},
-    {"id": "numbers", "icon": "🔢", "title": "Numbers", "objective": "Math operations", "theory": "Python handles ints and floats.", "starter_code": "print(10 + 5)"},
-    {"id": "loops", "icon": "🔁", "title": "Loops", "objective": "Repeat actions", "theory": "Use for and while loops.", "starter_code": "for i in range(3): print(i)"},
-    {"id": "logic", "icon": "🌿", "title": "Conditionals", "objective": "Decision making", "theory": "if, elif, and else.", "starter_code": "if True: print('Yes')"},
-    {"id": "lists", "icon": "📦", "title": "Lists & Dicts", "objective": "Storing data", "theory": "Collections of items.", "starter_code": "my_list = [1, 2, 3]\\nprint(my_list)"},
-    {"id": "funcs", "icon": "🔧", "title": "Functions", "objective": "Reusable code", "theory": "Define blocks of code.", "starter_code": "def hi(): print('Hi')\\nhi()"},
-    {"id": "classes", "icon": "🏛️", "title": "Classes", "objective": "Objects", "theory": "Object Oriented Programming.", "starter_code": "class Dog: pass"}
+    {"id": "basics", "icon": "🐍", "title": "Python Basics", "objective": "Variables and print()", "theory": "Python is easy!\\n\\nType \`pri\` and hit Tab in the editor.", "starter_code": "name = 'PyForge'\\nprint(name)"},
+    {"id": "loops", "icon": "🔁", "title": "Loops", "objective": "Repeat actions", "theory": "Use for loops.\\n\\nTry typing \`for\` and Tab.", "starter_code": "for i in range(5):\\n    print(i)"}
 ]
 `
         },
