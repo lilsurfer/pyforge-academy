@@ -1,68 +1,130 @@
 """
-app.py — PyForge Academy (Cloudflare / stlite Wasm version)
-All features: 8 lessons, pro editor with autocomplete, sandbox, download, progress tracker.
+app.py — Python Learning Academy (Cloudflare / stlite Wasm version)
+IDENTICAL to the local app except:
+  1. Imports curriculum from root (not lessons.curriculum)
+  2. CSS loaded from ./theme.css (not styles/theme.css)
+  3. executor uses exec() not subprocess (Wasm compatible)
+  4. st_ace has autocomplete params enabled
 """
+
 import streamlit as st
+from pathlib import Path
+
 from executor import run_code
-from curriculum import LESSONS
+from curriculum import LESSONS  # <-- adjusted path for Wasm flat layout
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="PyForge Academy",
+    page_title="Python Learning Academy",
     page_icon="🐍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── Try Ace editor (autocomplete), fall back gracefully ───────────────────────
+# ── Load CSS ───────────────────────────────────────────────────────────────────
+css_path = Path("theme.css")  # <-- adjusted path for Wasm flat layout
+if css_path.exists():
+    with open(css_path, "r") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# ── Try to import streamlit-ace ────────────────────────────────────────────────
 try:
     from streamlit_ace import st_ace
     HAS_ACE = True
 except Exception:
     HAS_ACE = False
 
-# ── Theme ──────────────────────────────────────────────────────────────────────
-st.markdown("""<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono&display=swap');
-:root{--bg:#0d1117;--bg2:#161b22;--card:#1c2128;--blue:#58a6ff;--green:#3fb950;--purple:#bc8cff;--orange:#ffa657;--red:#f85149;--text:#e6edf3;--muted:#8b949e;--border:#30363d;}
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important;background:var(--bg)!important;color:var(--text)!important;}
-.main{background:var(--bg)!important;}
-[data-testid="stSidebar"]{background:var(--bg2)!important;border-right:1px solid var(--border)!important;}
-.stButton>button{background:linear-gradient(135deg,#1f6feb,#388bfd)!important;color:#fff!important;border:none!important;border-radius:8px!important;font-weight:600!important;transition:all .2s!important;}
-.stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 4px 16px rgba(56,139,253,.5)!important;}
-[data-testid="stDownloadButton"]>button{background:linear-gradient(135deg,#2ea043,#3fb950)!important;color:#fff!important;border:none!important;border-radius:8px!important;font-weight:600!important;}
-.theory-box{background:var(--card);padding:1.5rem;border-radius:12px;border:1px solid var(--border);line-height:1.75;overflow-y:auto;max-height:480px;}
-.theory-box h2{color:var(--blue);font-size:1.1rem;margin-top:0;}
-.theory-box h3{color:var(--orange);font-size:.95rem;margin-top:1rem;}
-.theory-box pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.9rem;overflow-x:auto;}
-.theory-box code{font-family:'JetBrains Mono',monospace;color:var(--purple);background:rgba(188,140,255,.1);padding:1px 5px;border-radius:4px;}
-.theory-box pre code{background:transparent;color:var(--text);}
-.theory-box table{width:100%;border-collapse:collapse;font-size:.875rem;}
-.theory-box th{background:var(--bg);color:var(--blue);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);}
-.theory-box td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted);}
-.challenge-box{background:rgba(188,140,255,.06);border:1px solid rgba(188,140,255,.25);border-radius:10px;padding:1rem 1.2rem;margin-top:.75rem;}
-.output-panel{background:#000;padding:1rem 1.2rem;border-radius:10px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:.85rem;margin-top:.75rem;animation:fadeIn .3s ease;}
-.output-panel.ok{border-color:rgba(63,185,80,.35);box-shadow:0 0 16px rgba(63,185,80,.1);}
-.output-panel.err{border-color:rgba(248,81,73,.35);box-shadow:0 0 16px rgba(248,81,73,.1);}
-.prog-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin:6px 0 12px;}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .4s;}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-#MainMenu,footer,header{visibility:hidden;}
-</style>""", unsafe_allow_html=True)
-
-# ── Session state ──────────────────────────────────────────────────────────────
-if "idx" not in st.session_state:   st.session_state.idx = 0
-if "done" not in st.session_state:  st.session_state.done = set()
-if "sb" not in st.session_state:
-    st.session_state.sb = (
-        "# 🧪 Sandbox — experiment freely!\n\n"
-        "for i in range(1, 6):\n"
-        '    print(f"Line {i}: " + "★" * i)\n'
+# ── Session state defaults ─────────────────────────────────────────────────────
+if "selected_lesson" not in st.session_state:
+    st.session_state.selected_lesson = 0
+if "sandbox_code" not in st.session_state:
+    st.session_state.sandbox_code = (
+        '# 🧪 Sandbox — Your free coding space\n'
+        '# Write any Python you like!\n\n'
+        'message = "Hello from the Sandbox! 🚀"\n'
+        'print(message)\n\n'
+        'for i in range(1, 6):\n'
+        '    print(f"  Line {i}:", "★" * i)\n'
     )
+if "completed" not in st.session_state:
+    st.session_state.completed = set()
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
-def editor(key, value, height=380):
-    """Ace editor with autocomplete, or plain text_area fallback."""
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR
+# ══════════════════════════════════════════════════════════════════════════════
+def render_sidebar():
+    with st.sidebar:
+        st.markdown(
+            """
+            <div class="sidebar-logo">
+                <h1>🐍 Python Academy</h1>
+                <p>Interactive Learning Environment</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Progress indicator
+        n_done = len(st.session_state.completed)
+        n_total = len(LESSONS)
+        pct = int(n_done / n_total * 100)
+        st.markdown(
+            f"""
+            <div class="progress-section">
+                <div style="display:flex;justify-content:space-between;
+                            font-size:0.75rem;color:var(--text-secondary);">
+                    <span>Progress</span>
+                    <span>{n_done}/{n_total} lessons</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width:{pct}%"></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<div style='font-size:0.7rem;font-weight:700;"
+            "color:var(--text-muted);text-transform:uppercase;"
+            "letter-spacing:1px;padding:0.5rem 0 0.3rem 0;"
+            "margin-left:2px;'>Curriculum</div>",
+            unsafe_allow_html=True,
+        )
+
+        for idx, lesson in enumerate(LESSONS):
+            done_mark = " ✓" if idx in st.session_state.completed else ""
+            label = f"{lesson['icon']} {lesson['title']}{done_mark}"
+            is_active = st.session_state.selected_lesson == idx
+
+            if st.button(
+                label,
+                key=f"lesson_btn_{idx}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                st.session_state.selected_lesson = idx
+                st.rerun()
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style='font-size:0.75rem;color:var(--text-muted);
+                        text-align:center;padding:0.5rem 0;'>
+                Built with ❤️ using Streamlit<br>
+                <span style='color:var(--accent-blue);'>Python Learning Academy</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CODE EDITOR WIDGET
+# ══════════════════════════════════════════════════════════════════════════════
+def code_editor(key: str, value: str, height: int = 300) -> str:
+    """Render a code editor — uses streamlit-ace if available, else text_area."""
     if HAS_ACE:
         return st_ace(
             value=value,
@@ -73,161 +135,332 @@ def editor(key, value, height=380):
             font_size=14,
             tab_size=4,
             show_gutter=True,
+            show_print_margin=False,
+            wrap=False,
             auto_update=True,
-            enable_basic_autocomplete=True,   # Tab-to-complete keywords
-            enable_live_autocomplete=True,    # Live suggestions as you type
-            enable_snippets=True,             # Code snippet templates
+            annotations=None,
+            enable_basic_autocomplete=True,  # <-- Tab to complete Python keywords
+            enable_live_autocomplete=True,   # <-- Live suggestions as you type
+            enable_snippets=True,            # <-- Code snippet templates
         )
-    return st.text_area("Code", value=value, height=height, key=key, label_visibility="collapsed")
+    else:
+        return st.text_area(
+            label="Python Code",
+            value=value,
+            height=height,
+            key=key,
+            label_visibility="collapsed",
+        )
 
 
-def show_output(res):
-    cls  = "err" if res.error else "ok"
-    icon = "❌" if res.error else "✅"
-    body = f'<pre style="color:{"#f85149" if res.error else "#e6edf3"};margin:0;white-space:pre-wrap">' \
-           f'{res.error or res.output or "(no output)"}</pre>'
+# ══════════════════════════════════════════════════════════════════════════════
+# OUTPUT RENDERER
+# ══════════════════════════════════════════════════════════════════════════════
+def render_output(result):
+    """Display execution results with styled output panel."""
+    has_error = bool(result.error)
+    has_output = bool(result.output)
+
+    status = "error" if has_error else "success"
+    label_text = "❌ Error" if has_error else "✅ Output"
+
+    content_html = ""
+    if has_output:
+        safe = result.output.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        content_html += f'<div class="output-text">{safe}</div>'
+    if has_error:
+        safe_err = result.error.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        content_html += f'<div class="error-text">{safe_err}</div>'
+    if not has_output and not has_error:
+        content_html = '<div style="color:var(--text-muted);font-style:italic;">No output.</div>'
+
+    meta = f"⏱ {result.exec_time * 1000:.1f} ms"
+    if result.timed_out:
+        meta += "  |  ⏰ Timed out"
+
     st.markdown(
-        f'<div class="output-panel {cls}">'
-        f'<span style="font-size:.75rem;font-weight:700;color:{"#f85149" if res.error else "#3fb950"}">'
-        f'{icon} {"ERROR" if res.error else "OUTPUT"}</span><br>{body}'
-        f'<div style="font-size:.7rem;color:#484f58;margin-top:.4rem;border-top:1px solid #30363d;padding-top:.3rem">'
-        f'⏱ {res.exec_time*1000:.1f} ms</div></div>',
+        f"""
+        <div class="output-panel {status}" style="margin-top:0.8rem;">
+            <span class="output-label {status}">{label_text}</span>
+            {content_html}
+            <div class="output-meta">{meta}</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-# ── Sidebar ────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown('<h2 style="color:#58a6ff;margin:0;font-size:1.2rem">🐍 PyForge Academy</h2>'
-                '<p style="color:#8b949e;font-size:.8rem;margin:2px 0 12px">Interactive Python Learning</p>',
-                unsafe_allow_html=True)
 
-    n_done, n_total = len(st.session_state.done), len(LESSONS)
-    pct = int(n_done / n_total * 100)
+# ══════════════════════════════════════════════════════════════════════════════
+# LESSON TAB
+# ══════════════════════════════════════════════════════════════════════════════
+def render_lesson_tab():
+    lesson = LESSONS[st.session_state.selected_lesson]
+
+    # Header
     st.markdown(
-        f'<div style="font-size:.78rem;color:#8b949e">Progress: {n_done}/{n_total} lessons</div>'
-        f'<div class="prog-bar"><div class="prog-fill" style="width:{pct}%"></div></div>',
+        f"""
+        <div class="lesson-header">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span style="font-size:2rem;">{lesson['icon']}</span>
+                <div>
+                    <h2>Lesson {st.session_state.selected_lesson + 1}: {lesson['title']}</h2>
+                    <span class="lesson-objective">🎯 {lesson['objective']}</span>
+                </div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div style="font-size:.7rem;font-weight:700;color:#484f58;text-transform:uppercase;'
-                'letter-spacing:1px;margin-bottom:4px">Curriculum</div>', unsafe_allow_html=True)
-
-    for i, lsn in enumerate(LESSONS):
-        mark = " ✓" if i in st.session_state.done else ""
-        label = f"{lsn['icon']} {lsn['title']}{mark}"
-        if st.button(label, key=f"nav_{i}", use_container_width=True,
-                     type="primary" if st.session_state.idx == i else "secondary"):
-            st.session_state.idx = i
-            st.rerun()
-
-    st.markdown("<hr><div style='font-size:.72rem;color:#484f58;text-align:center'>"
-                "Built with ❤️ &nbsp;·&nbsp; PyForge Academy</div>", unsafe_allow_html=True)
-
-# ── Main ───────────────────────────────────────────────────────────────────────
-st.markdown('<div style="background:linear-gradient(135deg,#161b22,#1c2128);padding:1.2rem 1.5rem;'
-            'border-radius:12px;border:1px solid #30363d;margin-bottom:1rem;position:relative;overflow:hidden">'
-            '<div style="position:absolute;top:0;left:0;right:0;height:2px;'
-            'background:linear-gradient(90deg,#58a6ff,#bc8cff,#3fb950)"></div>'
-            '<h1 style="margin:0;font-size:1.7rem;font-weight:800;background:linear-gradient(135deg,#58a6ff,#bc8cff);'
-            '-webkit-background-clip:text;-webkit-text-fill-color:transparent">🐍 PyForge Academy</h1>'
-            '<p style="margin:4px 0 0;color:#8b949e;font-size:.9rem">Master Python through interactive lessons and live code execution.</p>'
-            '</div>', unsafe_allow_html=True)
-
-tab_lessons, tab_sandbox = st.tabs(["📚  Lessons", "🧪  Sandbox"])
-
-# ── Lessons Tab ────────────────────────────────────────────────────────────────
-with tab_lessons:
-    lsn = LESSONS[st.session_state.idx]
-
-    st.markdown(
-        f'<div style="background:#1c2128;padding:1rem 1.3rem;border-radius:10px;'
-        f'border:1px solid #30363d;border-left:3px solid #58a6ff;margin-bottom:1rem">'
-        f'<div style="display:flex;align-items:center;gap:10px">'
-        f'<span style="font-size:1.8rem">{lsn["icon"]}</span>'
-        f'<div><h2 style="margin:0;font-size:1.25rem">Lesson {st.session_state.idx+1}: {lsn["title"]}</h2>'
-        f'<span style="background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.25);'
-        f'color:#3fb950;padding:2px 10px;border-radius:100px;font-size:.75rem">🎯 {lsn["objective"]}</span>'
-        f'</div></div></div>',
-        unsafe_allow_html=True,
-    )
-
+    # Theory + Editor columns
     col_theory, col_editor = st.columns([1, 1], gap="medium")
 
     with col_theory:
-        st.markdown(f'<div class="theory-box">{lsn["theory"]}</div>', unsafe_allow_html=True)
-        if lsn.get("challenge"):
+        st.markdown(
+            f'<div class="theory-box">{_md_to_html_passthrough(lesson["theory"])}</div>',
+            unsafe_allow_html=True,
+        )
+
+        # Challenge box
+        if lesson.get("challenge"):
             st.markdown(
-                f'<div class="challenge-box">'
-                f'<div style="font-size:.78rem;font-weight:700;color:#bc8cff;text-transform:uppercase;'
-                f'letter-spacing:1px;margin-bottom:.4rem">💡 Challenge</div>'
-                f'<p style="margin:0;color:#8b949e;font-size:.9rem">{lsn["challenge"]}</p></div>',
+                f"""
+                <div class="challenge-box">
+                    <div class="challenge-title">💡 Challenge</div>
+                    <p>{lesson['challenge']}</p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
 
     with col_editor:
-        st.markdown('<div style="font-size:.75rem;font-weight:700;color:#8b949e;text-transform:uppercase;'
-                    'letter-spacing:1px;margin-bottom:4px">⌨️ Python Editor'
-                    + (' · <span style="color:#ffa657">Autocomplete ON (Tab)</span>' if HAS_ACE else '') +
-                    '</div>', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class="editor-label">
+                <span class="editor-dot"></span> Python Editor
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        ed_key = f"ed_{lsn['id']}"
-        if ed_key not in st.session_state:
-            st.session_state[ed_key] = lsn["starter_code"]
+        editor_key = f"lesson_editor_{lesson['id']}"
+        starter_key = f"_starter_{lesson['id']}"
+        if starter_key not in st.session_state:
+            st.session_state[starter_key] = True
+            st.session_state[editor_key] = lesson["starter_code"].strip()
 
-        code = editor(ed_key, st.session_state[ed_key])
+        code = code_editor(
+            key=editor_key,
+            value=st.session_state.get(editor_key, lesson["starter_code"].strip()),
+            height=360,
+        )
 
-        btn_run, btn_reset = st.columns([3, 1])
-        with btn_run:
-            if st.button("▶  Run Code", key=f"run_{lsn['id']}", use_container_width=True):
-                res = run_code(code or "")
-                show_output(res)
-                if not res.error:
-                    st.session_state.done.add(st.session_state.idx)
-        with btn_reset:
-            if st.button("↺ Reset", key=f"rst_{lsn['id']}", use_container_width=True):
-                st.session_state[ed_key] = lsn["starter_code"]
+        btn_col, reset_col = st.columns([3, 1])
+        with btn_col:
+            run_clicked = st.button(
+                "▶  Run Code",
+                key=f"run_{lesson['id']}",
+                use_container_width=True,
+            )
+        with reset_col:
+            if st.button("↺ Reset", key=f"reset_{lesson['id']}", use_container_width=True):
+                st.session_state[editor_key] = lesson["starter_code"].strip()
                 st.rerun()
 
+        if run_clicked and code:
+            result = run_code(code)
+            render_output(result)
+            if not result.error and not result.timed_out:
+                st.session_state.completed.add(st.session_state.selected_lesson)
+
+        # Navigation buttons
+        st.markdown("<div style='margin-top:1rem;'></div>", unsafe_allow_html=True)
         nav_prev, nav_next = st.columns(2)
         with nav_prev:
-            if st.session_state.idx > 0:
-                if st.button("← Prev", key=f"prev_{lsn['id']}", use_container_width=True):
-                    st.session_state.idx -= 1
+            if st.session_state.selected_lesson > 0:
+                if st.button("← Previous", key=f"prev_{lesson['id']}", use_container_width=True):
+                    st.session_state.selected_lesson -= 1
                     st.rerun()
         with nav_next:
-            if st.session_state.idx < len(LESSONS) - 1:
-                if st.button("Next →", key=f"nxt_{lsn['id']}", use_container_width=True):
-                    st.session_state.idx += 1
+            if st.session_state.selected_lesson < len(LESSONS) - 1:
+                if st.button("Next →", key=f"next_{lesson['id']}", use_container_width=True):
+                    st.session_state.selected_lesson += 1
                     st.rerun()
             else:
-                st.success("🎓 All lessons complete!")
+                st.success("🎓 You've completed the curriculum!")
 
-# ── Sandbox Tab ────────────────────────────────────────────────────────────────
-with tab_sandbox:
-    st.markdown('<h3 style="margin:0 0 .5rem">🧪 Sandbox</h3>'
-                '<p style="color:#8b949e;font-size:.85rem;margin:0 0 1rem">'
-                'Free Python playground. '
-                + ('Autocomplete is ON — type and hit <kbd>Tab</kbd>.' if HAS_ACE else 'Type freely.')
-                + '</p>', unsafe_allow_html=True)
 
-    sb_code = editor("sb_ed", st.session_state.sb, height=460)
-    if sb_code is not None:
-        st.session_state.sb = sb_code
+def _md_to_html_passthrough(markdown_text: str) -> str:
+    """
+    Convert markdown theory content to HTML for rendering inside raw HTML divs.
+    Handles: code blocks, inline code, headers, bold, tables, paragraphs.
+    """
+    import re
 
-    col_r, col_d, col_c = st.columns([2, 2, 1])
-    with col_r:
-        if st.button("▶  Run", key="sb_run", use_container_width=True):
-            res = run_code(sb_code or st.session_state.sb)
-            show_output(res)
-    with col_d:
-        st.download_button(
-            "⬇  Download .py",
-            data=sb_code or st.session_state.sb,
-            file_name="pyforge_script.py",
-            mime="text/plain",
+    text = markdown_text.strip()
+
+    # Fenced code blocks ```...```
+    def replace_code_block(m):
+        code = m.group(1)
+        code = code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return f'<pre><code>{code}</code></pre>'
+    text = re.sub(r'```(?:\w+)?\n?(.*?)```', replace_code_block, text, flags=re.DOTALL)
+
+    # Inline code `...`
+    text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
+
+    # Headers
+    text = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
+    text = re.sub(r'^### (.+)$',  r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.+)$',   r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'^# (.+)$',    r'<h1>\1</h1>', text, flags=re.MULTILINE)
+
+    # Bold **...**
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+
+    # Tables
+    lines = text.split('\n')
+    result_lines = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if '|' in line and i + 1 < len(lines) and re.match(r'\s*\|[\s\-|]+\|\s*$', lines[i + 1]):
+            headers = [h.strip() for h in line.strip().strip('|').split('|')]
+            table_html = '<table><thead><tr>'
+            for h in headers:
+                table_html += f'<th>{h}</th>'
+            table_html += '</tr></thead><tbody>'
+            i += 2
+            while i < len(lines) and '|' in lines[i]:
+                cells = [c.strip() for c in lines[i].strip().strip('|').split('|')]
+                table_html += '<tr>'
+                for c in cells:
+                    table_html += f'<td>{c}</td>'
+                table_html += '</tr>'
+                i += 1
+            table_html += '</tbody></table>'
+            result_lines.append(table_html)
+            continue
+        result_lines.append(line)
+        i += 1
+    text = '\n'.join(result_lines)
+
+    # Paragraphs
+    paragraphs = re.split(r'\n{2,}', text)
+    html_parts = []
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+        if para.startswith('<'):
+            html_parts.append(para)
+        else:
+            para = para.replace('\n', '<br>')
+            html_parts.append(f'<p>{para}</p>')
+
+    return '\n'.join(html_parts)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SANDBOX TAB
+# ══════════════════════════════════════════════════════════════════════════════
+def render_sandbox_tab():
+    st.markdown(
+        """
+        <div class="app-header">
+            <h1>🧪 Sandbox</h1>
+            <p>Your unlimited Python playground — experiment freely, no lesson constraints.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        '<div class="editor-label"><span class="editor-dot"></span> Python Editor</div>',
+        unsafe_allow_html=True,
+    )
+
+    sandbox_code = code_editor(
+        key="sandbox_editor",
+        value=st.session_state.sandbox_code,
+        height=480,
+    )
+
+    if sandbox_code is not None:
+        st.session_state.sandbox_code = sandbox_code
+
+    col_run, col_download, col_clear = st.columns([2, 2, 1])
+
+    with col_run:
+        run_sandbox = st.button(
+            "▶  Run Code",
+            key="run_sandbox",
             use_container_width=True,
         )
-    with col_c:
-        if st.button("✕ Clear", key="sb_clr", use_container_width=True):
-            st.session_state.sb = "# Start fresh!\n"
+
+    with col_download:
+        code_to_download = sandbox_code or st.session_state.sandbox_code
+        st.download_button(
+            label="⬇  Download .py",
+            data=code_to_download,
+            file_name="sandbox_code.py",
+            mime="text/plain",
+            use_container_width=True,
+            key="download_sandbox",
+        )
+
+    with col_clear:
+        if st.button("✕ Clear", key="clear_sandbox", use_container_width=True):
+            st.session_state.sandbox_code = "# Start fresh!\n"
             st.rerun()
+
+    if run_sandbox:
+        code_to_run = sandbox_code or st.session_state.sandbox_code
+        result = run_code(code_to_run)
+        render_output(result)
+
+    st.markdown(
+        """
+        <div style="margin-top:1.5rem;padding:0.8rem 1.2rem;
+                    background:rgba(88,166,255,0.06);
+                    border:1px solid rgba(88,166,255,0.15);
+                    border-radius:8px;font-size:0.8rem;
+                    color:var(--text-secondary);">
+            <strong style="color:var(--accent-blue);">💡 Sandbox Tips</strong><br>
+            • Code runs safely inside your browser via WebAssembly<br>
+            • <code>import</code> any standard library module freely<br>
+            • Use <strong>⬇ Download .py</strong> to save your code locally<br>
+            • Standard <code>print()</code> output and errors are both shown below
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN APP
+# ══════════════════════════════════════════════════════════════════════════════
+def main():
+    render_sidebar()
+
+    st.markdown(
+        """
+        <div class="app-header">
+            <h1>🐍 Python Learning Academy</h1>
+            <p>Master Python through interactive lessons, live execution, and hands-on challenges.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    tab_lessons, tab_sandbox = st.tabs(["📚  Lessons", "🧪  Sandbox"])
+
+    with tab_lessons:
+        render_lesson_tab()
+
+    with tab_sandbox:
+        render_sandbox_tab()
+
+
+if __name__ == "__main__":
+    main()
