@@ -39,7 +39,7 @@ if "sandbox_code" not in st.session_state:
         'message = "Hello from the Sandbox! 🚀"\n'
         'print(message)\n\n'
         'for i in range(1, 6):\n'
-        '    print(f"  Line {i}: {"★" * i}")\n'
+        '    print(f"  Line {i}:", "★" * i)\n'
     )
 if "completed" not in st.session_state:
     st.session_state.completed = set()
