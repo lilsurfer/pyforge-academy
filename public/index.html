@@ -1,504 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PyForge Academy</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/theme/monokai.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#1e1e2e;--bar:#181825;--card:#313244;--out:#11111b;--blue:#89b4fa;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--text:#cdd6f4;--muted:#6c7086;--border:#313244}
-html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
-
-/* TOOLBAR */
-.toolbar{display:flex;align-items:center;gap:10px;height:48px;padding:0 16px;background:var(--bar);border-bottom:1px solid var(--border);flex-shrink:0}
-.logo{font-weight:700;font-size:1rem;color:var(--blue);margin-right:8px;display:flex;align-items:center;gap:6px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:none;border-radius:6px;font-family:'Inter',sans-serif;font-size:.825rem;font-weight:600;cursor:pointer;transition:all .15s}
-.btn-run{background:var(--green);color:#1e1e2e}
-.btn-run:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-run:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-sec{background:var(--card);color:var(--text);border:1px solid var(--border)}
-.btn-sec:hover{background:#45475a}
-.sep{width:1px;height:24px;background:var(--border)}
-.ml{margin-left:auto}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:100px;font-size:.75rem;font-weight:500}
-.pill.loading{background:rgba(249,226,175,.1);color:var(--yellow)}
-.pill.ready{background:rgba(166,227,161,.1);color:var(--green)}
-.pill.running{background:rgba(137,180,250,.1);color:var(--blue)}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
-.pulse{animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.kbd{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--muted);background:var(--card);padding:2px 5px;border-radius:4px;border:1px solid var(--border)}
-
-/* LAYOUT */
-.workspace{display:flex;flex:1;overflow:hidden;height:calc(100vh - 48px)}
-
-/* SIDEBAR */
-.sidebar{width:220px;flex-shrink:0;background:var(--bar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.sb-head{padding:10px 16px 8px;font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);flex-shrink:0}
-.lesson-list{overflow-y:auto;flex:1}
-.li{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;font-size:.84rem;color:#a6adc8;border-left:3px solid transparent;transition:all .15s;user-select:none}
-.li:hover{background:rgba(255,255,255,.04);color:var(--text)}
-.li.active{background:rgba(137,180,250,.08);color:var(--blue);border-left-color:var(--blue)}
-.li .lnum{font-size:.68rem;color:var(--muted);background:var(--card);width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0}
-.li .chk{margin-left:auto;color:var(--green);font-size:.75rem}
-.sb-foot{padding:10px 16px;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted)}
-.pbar{height:3px;background:var(--card);border-radius:2px;margin-top:5px;overflow:hidden}
-.pfill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .4s}
-
-/* MAIN */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-
-/* THEORY */
-.theory{background:var(--bar);border-bottom:1px solid var(--border);overflow:hidden;max-height:0;transition:max-height .3s ease;flex-shrink:0}
-.theory.open{max-height:260px}
-.theory-inner{padding:14px 20px;display:grid;grid-template-columns:1fr auto;gap:20px;overflow-y:auto;max-height:260px}
-.theory-text{font-size:.84rem;line-height:1.7;color:#a6adc8}
-.theory-text h3{color:var(--blue);font-size:.9rem;margin-bottom:6px}
-.theory-text code{font-family:'JetBrains Mono',monospace;background:var(--card);color:var(--yellow);padding:1px 5px;border-radius:3px;font-size:.82em}
-.theory-text pre{background:var(--out);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin:6px 0;overflow-x:auto}
-.theory-text pre code{background:none;color:var(--text);padding:0}
-.challenge{width:260px;flex-shrink:0;background:rgba(137,180,250,.06);border:1px solid rgba(137,180,250,.2);border-radius:8px;padding:12px 14px;font-size:.8rem;color:#a6adc8;align-self:start}
-.challenge strong{color:var(--blue);display:block;margin-bottom:4px}
-
-/* EDITOR */
-.editor-wrap{flex:1;overflow:hidden;position:relative}
-.CodeMirror{height:100%!important;font-family:'JetBrains Mono',monospace!important;font-size:14px!important;background:#272822!important}
-.CodeMirror-scroll{overflow-y:auto!important;overflow-x:auto!important}
-
-/* OUTPUT */
-.output{height:220px;flex-shrink:0;border-top:2px solid var(--border);display:flex;flex-direction:column;background:var(--out)}
-.out-head{display:flex;align-items:center;padding:5px 14px;background:var(--bar);border-bottom:1px solid var(--border);gap:8px;font-size:.75rem;color:var(--muted);flex-shrink:0}
-.out-head .title{font-weight:600;color:var(--text)}
-.out-body{flex:1;overflow-y:auto;padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:.85rem;white-space:pre-wrap;line-height:1.6}
-.out-body .stdout{color:var(--text)}
-.out-body .stderr{color:var(--red)}
-.out-body .info{color:var(--muted);font-style:italic}
-.out-body .success{color:var(--green)}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:#1e1e2e;color:#cdd6f4}
+/* toolbar */
+.bar{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;background:#181825;border-bottom:1px solid #313244}
+.logo{font-weight:700;color:#89b4fa;margin-right:6px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border:none;border-radius:6px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.run{background:#a6e3a1;color:#1e1e2e}.run:hover{filter:brightness(1.1)}.run:disabled{opacity:.45;cursor:not-allowed}
+.sec{background:#313244;color:#cdd6f4;border:1px solid #45475a}.sec:hover{background:#45475a}
+.sep{width:1px;height:22px;background:#313244}
+.ml{margin-left:auto;display:flex;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:100px;font-size:.72rem;font-weight:500}
+.pill.load{background:rgba(249,226,175,.1);color:#f9e2af}
+.pill.ok{background:rgba(166,227,161,.1);color:#a6e3a1}
+.pill.run{background:rgba(137,180,250,.1);color:#89b4fa}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.anim{animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+/* tabs */
+.tabs{display:flex;align-items:center;height:34px;background:#11111b;border-bottom:1px solid #313244;padding:0 10px;gap:4px}
+.tab{display:flex;align-items:center;gap:6px;padding:0 14px;height:100%;font-size:.8rem;color:#6c7086;border-bottom:2px solid transparent;cursor:pointer;user-select:none}
+.tab.active{color:#cdd6f4;border-bottom-color:#89b4fa}
+/* layout */
+.workspace{display:flex;height:calc(100vh - 78px)}
+.pane{display:flex;flex-direction:column;overflow:hidden}
+.left{flex:0 0 55%;border-right:2px solid #313244}
+.right{flex:1}
+/* sidebar */
+.sb{width:180px;flex-shrink:0;background:#181825;border-right:1px solid #313244;display:flex;flex-direction:column;overflow:hidden}
+.sb-title{padding:8px 12px;font-size:.65rem;font-weight:700;color:#6c7086;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #313244}
+.lessons{overflow-y:auto;flex:1}
+.li{display:flex;align-items:center;gap:7px;padding:8px 12px;cursor:pointer;font-size:.78rem;color:#a6adc8;border-left:3px solid transparent;transition:all .12s}
+.li:hover{background:rgba(255,255,255,.04);color:#cdd6f4}
+.li.on{background:rgba(137,180,250,.08);color:#89b4fa;border-left-color:#89b4fa}
+.li .n{font-size:.65rem;color:#6c7086;background:#313244;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:3px;flex-shrink:0}
+.li .ck{margin-left:auto;color:#a6e3a1;font-size:.7rem}
+.sb-foot{padding:8px 12px;border-top:1px solid #313244;font-size:.68rem;color:#6c7086}
+.pb{height:3px;background:#313244;border-radius:2px;margin-top:4px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,#89b4fa,#a6e3a1);transition:width .4s}
+/* editor */
+.ed-wrap{flex:1;overflow:hidden}
+.CodeMirror{height:100%!important;font-family:'JetBrains Mono',monospace!important;font-size:13px!important}
+/* terminal panel */
+.term-head{display:flex;align-items:center;height:30px;padding:0 12px;background:#181825;border-bottom:1px solid #313244;font-size:.72rem;gap:8px}
+.term-tabs{display:flex;gap:2px}
+.ttab{padding:2px 10px;font-size:.72rem;border-radius:3px;cursor:pointer;color:#6c7086;font-weight:600}
+.ttab.on{background:rgba(137,180,250,.12);color:#89b4fa}
+.term-body{flex:1;background:#11111b;padding:6px 4px;overflow:hidden}
+#terminal{height:100%}
+/* xterm overrides */
+.xterm{height:100%!important}
+.xterm-viewport{background:#11111b!important}
 </style>
 </head>
 <body>
 
 <!-- TOOLBAR -->
-<div class="toolbar">
-  <div class="logo">🐍 PyForge Academy</div>
+<div class="bar">
+  <div class="logo">🐍 PyForge</div>
   <div class="sep"></div>
-  <button class="btn btn-run" id="btnRun" disabled onclick="runCode()">▶ Run</button>
-  <span class="kbd">Ctrl+Enter</span>
+  <button class="btn run" id="btnRun" disabled onclick="runCode()">▶ Run</button>
+  <span style="font-size:.72rem;color:#6c7086;font-family:'JetBrains Mono',monospace">Ctrl+Enter</span>
   <div class="sep"></div>
-  <button class="btn btn-sec" id="btnTheory" onclick="toggleTheory()">📖 Lesson</button>
-  <button class="btn btn-sec" onclick="clearOutput()">✕ Clear</button>
-  <button class="btn btn-sec" onclick="downloadCode()">⬇ Download</button>
-  <div class="ml" style="display:flex;align-items:center;gap:10px">
-    <div class="pill loading" id="statusPill"><div class="dot pulse" id="statusDot"></div><span id="statusText">Loading Python…</span></div>
+  <button class="btn sec" onclick="clearTerm()">✕ Clear</button>
+  <button class="btn sec" onclick="dlCode()">⬇ Download</button>
+  <div class="ml">
+    <div class="pill load" id="pill"><div class="dot anim" id="pdot"></div><span id="ptxt">Loading Python…</span></div>
   </div>
+</div>
+
+<!-- FILE TABS -->
+<div class="tabs">
+  <div class="tab active">📄 main.py</div>
 </div>
 
 <!-- WORKSPACE -->
 <div class="workspace">
 
   <!-- SIDEBAR -->
-  <div class="sidebar">
-    <div class="sb-head">Curriculum</div>
-    <div class="lesson-list" id="lessonList"></div>
+  <div class="sb">
+    <div class="sb-title">Curriculum</div>
+    <div class="lessons" id="lessons"></div>
     <div class="sb-foot">
-      <span id="progText">0/8 lessons</span>
-      <div class="pbar"><div class="pfill" id="progFill" style="width:0%"></div></div>
+      <span id="prog">0/8 lessons</span>
+      <div class="pb"><div class="pf" id="pf" style="width:0"></div></div>
     </div>
   </div>
 
-  <!-- MAIN -->
-  <div class="main">
-    <!-- Theory panel -->
-    <div class="theory" id="theoryPanel">
-      <div class="theory-inner">
-        <div class="theory-text" id="theoryText"></div>
-        <div class="challenge" id="challengeBox"></div>
-      </div>
-    </div>
-
-    <!-- Editor -->
-    <div class="editor-wrap">
+  <!-- EDITOR PANE -->
+  <div class="pane left">
+    <div class="ed-wrap">
       <textarea id="editor"></textarea>
     </div>
+  </div>
 
-    <!-- Output -->
-    <div class="output">
-      <div class="out-head">
-        <span class="title">Output</span>
-        <span id="execTime" style="margin-left:auto"></span>
+  <!-- TERMINAL PANE -->
+  <div class="pane right">
+    <div class="term-head">
+      <div class="term-tabs">
+        <div class="ttab on">TERMINAL</div>
+        <div class="ttab" id="probTab">PROBLEMS</div>
       </div>
-      <div class="out-body" id="outputBody"><span class="info">Run your code to see output here…</span></div>
+    </div>
+    <div class="term-body">
+      <div id="terminal"></div>
     </div>
   </div>
 </div>
 
+<!-- SCRIPTS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/hint/show-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/hint/anyword-hint.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/edit/matchbrackets.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.17/addon/comment/comment.min.js"></script>
-<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
 <script>
-// ── LESSONS ──────────────────────────────────────────────────────────────────
+// ── LESSONS ───────────────────────────────────────────────────────────────────
 const LESSONS = [
-{id:"basics",icon:"🐍",title:"Python Basics",objective:"Variables, types, and print()",
-theory:`<h3>🐍 Python Basics</h3><p>Variables store data. Python is dynamically typed — no need to declare types.</p><pre><code>name = "Alice"
-age  = 30
-pi   = 3.14
-ok   = True</code></pre><p>Use <code>print()</code> to display output and <code>type()</code> to inspect types.</p><pre><code>print(f"Hello {name}, age {age}")
-print(type(pi))   # &lt;class 'float'&gt;</code></pre>`,
-challenge:"Create variables for your name, age, and favourite language. Print them using an f-string.",
-code:`# 🐍 Python Basics
-name       = "Python Learner"
-age        = 25
-is_awesome = True
-
-print(f"Name: {name}")
-print(f"Age: {age}")
-print(f"Awesome? {is_awesome}")
-print(f"Type of age: {type(age)}")`},
-
-{id:"strings",icon:"📝",title:"Strings",objective:"Slicing, methods, and f-strings",
-theory:`<h3>📝 Strings</h3><p>Strings are sequences of characters with powerful built-in methods.</p><pre><code>s = "Hello, Python!"
-print(s[0])       # H
-print(s[-1])      # !
-print(s[0:5])     # Hello
-print(s[::-1])    # reversed</code></pre><p>Common methods: <code>.upper()</code> <code>.lower()</code> <code>.strip()</code> <code>.replace()</code> <code>.split()</code></p>`,
-challenge:"Take '  Hello Python World!  ', strip whitespace, title-case it, split into words, print count.",
-code:`# 📝 Strings
-s = "The quick brown fox"
-print(s.upper())
-print(s.replace("fox","cat"))
-print(s.split())
-print(f"Length: {len(s)}")
-print(f"Reversed: {s[::-1]}")`},
-
-{id:"numbers",icon:"🔢",title:"Numbers & Math",objective:"Arithmetic and the math module",
-theory:`<h3>🔢 Numbers &amp; Math</h3><pre><code>a, b = 17, 5
-print(a + b)   # 22
-print(a // b)  # 3  floor div
-print(a % b)   # 2  remainder
-print(a ** b)  # 1419857 power</code></pre><p>Use <code>import math</code> for <code>sqrt</code>, <code>pi</code>, <code>ceil</code>, <code>floor</code>.</p>`,
-challenge:"Compute the area of a circle with radius 7 using math.pi.",
-code:`# 🔢 Numbers & Math
-import math
-a, b = 17, 5
-print(f"{a}/{b} = {a/b:.4f}")
-print(f"sqrt(144) = {math.sqrt(144)}")
-print(f"pi = {math.pi:.6f}")
-print(f"ceil(4.2) = {math.ceil(4.2)}")`},
-
-{id:"loops",icon:"🔁",title:"Loops",objective:"for, while, range, enumerate",
-theory:`<h3>🔁 Loops</h3><pre><code>for i in range(5):
-    print(i)       # 0..4
-
-for i, v in enumerate(["a","b","c"], 1):
-    print(i, v)
-
-n = 0
-while n &lt; 3:
-    print(n)
-    n += 1</code></pre><p>Use <code>break</code> to exit, <code>continue</code> to skip.</p>`,
-challenge:"Print every odd number from 1 to 50, then print their sum.",
-code:`# 🔁 Loops
-print("Countdown:")
-for i in range(5, 0, -1):
-    print(f"  {i}...")
-print("  Liftoff! 🚀")
-
-total = sum(range(1, 101))
-print(f"Sum 1-100: {total}")`},
-
-{id:"cond",icon:"🌿",title:"Conditionals",objective:"if, elif, else, boolean logic",
-theory:`<h3>🌿 Conditionals</h3><pre><code>score = 85
-if score >= 90:
-    grade = "A"
-elif score >= 80:
-    grade = "B"
-else:
-    grade = "F"</code></pre><p>Operators: <code>==</code> <code>!=</code> <code>&gt;</code> <code>&lt;</code> <code>and</code> <code>or</code> <code>not</code></p><p>Ternary: <code>label = "even" if x%2==0 else "odd"</code></p>`,
-challenge:"Write FizzBuzz for numbers 1-20.",
-code:`# 🌿 Conditionals
-score = 78
-if score >= 90: grade = "A 🌟"
-elif score >= 80: grade = "B 😊"
-elif score >= 70: grade = "C 😐"
-else: grade = "F ❌"
-print(f"Score {score} → Grade {grade}")`},
-
-{id:"lists",icon:"📦",title:"Lists & Dicts",objective:"Collections, comprehensions",
-theory:`<h3>📦 Lists &amp; Dicts</h3><pre><code>nums = [3,1,4,1,5,9]
-nums.append(2)
-nums.sort()
-squares = [x**2 for x in range(5)]</code></pre><pre><code>person = {"name":"Alice","age":30}
-person["city"] = "London"
-for k,v in person.items():
-    print(k, v)</code></pre>`,
-challenge:"Count word frequency in a sentence using a dictionary.",
-code:`# 📦 Lists & Dicts
-nums = [64,34,25,12,22,11,90]
-nums.sort()
-print("Sorted:", nums)
-squares = [x**2 for x in range(1,8)]
-print("Squares:", squares)
-
-freq = {}
-for w in "python is great python is fun".split():
-    freq[w] = freq.get(w,0)+1
-print("Freq:", freq)`},
-
-{id:"funcs",icon:"🔧",title:"Functions",objective:"def, args, return, lambda",
-theory:`<h3>🔧 Functions</h3><pre><code>def greet(name, greeting="Hello"):
-    return f"{greeting}, {name}!"
-
-def total(*nums):
-    return sum(nums)
-
-square = lambda x: x**2</code></pre><p>Use docstrings: <code>"""Description."""</code> right after <code>def</code>.</p>`,
-challenge:"Write is_palindrome(s) ignoring case. Test 'racecar', 'Python', 'Level'.",
-code:`# 🔧 Functions
-def greet(name, greeting="Hello"):
-    return f"{greeting}, {name}! 👋"
-
-def factorial(n):
-    return 1 if n <= 1 else n * factorial(n-1)
-
-print(greet("Alice"))
-print(greet("Bob", "Hi"))
-for i in range(1,8):
-    print(f"{i}! = {factorial(i)}")`},
-
-{id:"classes",icon:"🏛️",title:"Classes & OOP",objective:"Classes, inheritance, properties",
-theory:`<h3>🏛️ Classes &amp; OOP</h3><pre><code>class Dog:
-    def __init__(self, name):
-        self.name = name
-    def bark(self):
-        return f"{self.name}: Woof!"
-
-class Poodle(Dog):
-    def bark(self):
-        return f"{self.name}: Yip!"</code></pre><p>Use <code>@property</code> for computed attributes.</p>`,
-challenge:"Add a Square class inheriting Rectangle with a from_diagonal(d) class method.",
-code:`# 🏛️ Classes & OOP
-import math
-class Shape:
-    def area(self): return 0
-    def describe(self):
-        print(f"{type(self).__name__}: area={self.area():.3f}")
-
-class Circle(Shape):
-    def __init__(self,r): self.r=r
-    def area(self): return math.pi*self.r**2
-
-class Rectangle(Shape):
-    def __init__(self,w,h): self.w,self.h=w,h
-    def area(self): return self.w*self.h
-
-for s in [Circle(5), Rectangle(8,4)]:
-    s.describe()`}
+  {id:'basics',  icon:'🐍', title:'Python Basics',   code:'name = "Python Learner"\nage = 25\nprint(f"Hello, {name}! Age: {age}")\nprint(type(age))'},
+  {id:'strings', icon:'📝', title:'Strings',          code:'s = "The quick brown fox"\nprint(s.upper())\nprint(s[::-1])\nprint(len(s.split()))'},
+  {id:'numbers', icon:'🔢', title:'Numbers & Math',   code:'import math\na, b = 17, 5\nprint(f"{a}/{b} = {a/b:.4f}")\nprint(f"sqrt(144) = {math.sqrt(144)}")\nprint(f"pi = {math.pi:.5f}")'},
+  {id:'loops',   icon:'🔁', title:'Loops',            code:'for i in range(5, 0, -1):\n    print(f"  {i}...")\nprint("Liftoff! 🚀")\nprint(f"Sum 1-100: {sum(range(101))}")'},
+  {id:'cond',    icon:'🌿', title:'Conditionals',     code:'score = 78\nif score >= 90: grade="A 🌟"\nelif score >= 80: grade="B 😊"\nelif score >= 70: grade="C 😐"\nelse: grade="F ❌"\nprint(f"Score {score} → {grade}")'},
+  {id:'lists',   icon:'📦', title:'Lists & Dicts',    code:'nums = [64,34,25,12,22,11,90]\nnums.sort()\nprint("Sorted:", nums)\nfreq = {}\nfor w in "python is great python".split():\n    freq[w] = freq.get(w,0)+1\nprint("Freq:", freq)'},
+  {id:'funcs',   icon:'🔧', title:'Functions',        code:'def factorial(n):\n    return 1 if n<=1 else n*factorial(n-1)\n\nfor i in range(1,8):\n    print(f"{i}! = {factorial(i)}")'},
+  {id:'classes', icon:'🏛️', title:'Classes & OOP',    code:'import math\nclass Circle:\n    def __init__(self,r): self.r=r\n    def area(self): return math.pi*self.r**2\n    def __repr__(self): return f"Circle(r={self.r}, area={self.area():.2f})"\n\nprint(Circle(5))\nprint(Circle(10))'},
 ];
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let pyodide = null;
-let currentLesson = 0;
-let completed = new Set();
-let theoryOpen = false;
+let current = 0;
+let done = new Set();
 
-// ── EDITOR ────────────────────────────────────────────────────────────────────
-const editor = CodeMirror.fromTextArea(document.getElementById('editor'), {
-  mode: 'python',
-  theme: 'monokai',
-  lineNumbers: true,
-  indentUnit: 4,
-  tabSize: 4,
-  indentWithTabs: false,
-  matchBrackets: true,
-  autoCloseBrackets: true,
-  extraKeys: {
-    'Tab': cm => {
-      if (cm.somethingSelected()) cm.indentSelection('add');
-      else {
-        // Python autocomplete on Tab
-        const cur = cm.getCursor(), token = cm.getTokenAt(cur);
-        if (token.string.trim()) {
-          CodeMirror.showHint(cm, pythonHint, {completeSingle: false});
-        } else {
-          cm.replaceSelection('    ');
-        }
-      }
-    },
-    'Ctrl-Enter': runCode,
-    'Ctrl-/': cm => cm.toggleComment()
+// ── CODEMIRROR ────────────────────────────────────────────────────────────────
+const KW = ['False','None','True','and','as','assert','async','await','break','class','continue','def','del','elif','else','except','finally','for','from','global','if','import','in','is','lambda','nonlocal','not','or','pass','raise','return','try','while','with','yield'];
+const BI = ['abs','all','any','bin','bool','chr','dict','dir','enumerate','eval','exec','filter','float','format','frozenset','getattr','hasattr','hash','help','hex','id','input','int','isinstance','iter','len','list','locals','map','max','min','next','object','oct','ord','pow','print','property','range','repr','reversed','round','set','setattr','slice','sorted','staticmethod','str','sum','super','tuple','type','vars','zip'];
+
+function pyHint(cm) {
+  const cur = cm.getCursor(), tok = cm.getTokenAt(cur);
+  const word = tok.string.trim();
+  if (!word) return;
+  const extra = cm.getValue().match(/[a-zA-Z_]\w*/g) || [];
+  const all = [...new Set([...KW,...BI,...extra])];
+  return {list: all.filter(w=>w.startsWith(word)&&w!==word), from: CodeMirror.Pos(cur.line,tok.start), to: CodeMirror.Pos(cur.line,tok.end)};
+}
+
+const cm = CodeMirror.fromTextArea(document.getElementById('editor'), {
+  mode:'python', theme:'monokai', lineNumbers:true,
+  indentUnit:4, tabSize:4, indentWithTabs:false,
+  matchBrackets:true, autoCloseBrackets:true,
+  extraKeys:{
+    'Tab': c => { if(c.somethingSelected()){c.indentSelection('add')} else { const t=c.getTokenAt(c.getCursor()); if(t.string.trim()) CodeMirror.showHint(c,pyHint,{completeSingle:false}); else c.replaceSelection('    '); }},
+    'Ctrl-Enter': ()=>runCode(),
   }
 });
+cm.on('inputRead',(c,e)=>{ if(e.text[0]&&/[a-zA-Z_]/.test(e.text[0])) CodeMirror.showHint(c,pyHint,{completeSingle:false}); });
 
-// Python keyword + builtin completions
-const PY_KEYWORDS = ['False','None','True','and','as','assert','async','await','break','class','continue','def','del','elif','else','except','finally','for','from','global','if','import','in','is','lambda','nonlocal','not','or','pass','raise','return','try','while','with','yield'];
-const PY_BUILTINS = ['abs','all','any','bin','bool','breakpoint','callable','chr','compile','complex','delattr','dict','dir','divmod','enumerate','eval','exec','filter','float','format','frozenset','getattr','globals','hasattr','hash','help','hex','id','input','int','isinstance','issubclass','iter','len','list','locals','map','max','memoryview','min','next','object','oct','open','ord','pow','print','property','range','repr','reversed','round','set','setattr','slice','sorted','staticmethod','str','sum','super','tuple','type','vars','zip'];
-
-function pythonHint(cm) {
-  const cur = cm.getCursor();
-  const token = cm.getTokenAt(cur);
-  const word = token.string.replace(/^\s+/, '');
-  const start = token.start + (token.string.length - word.length);
-  const editorWords = cm.getValue().match(/[a-zA-Z_]\w*/g) || [];
-  const all = [...new Set([...PY_KEYWORDS, ...PY_BUILTINS, ...editorWords])];
-  const matches = all.filter(w => w.startsWith(word) && w !== word);
-  return {list: matches, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, token.end)};
-}
-
-// Live autocomplete as you type
-editor.on('inputRead', (cm, event) => {
-  if (event.text[0] && /[a-zA-Z_]/.test(event.text[0])) {
-    CodeMirror.showHint(cm, pythonHint, {completeSingle: false});
-  }
+// ── XTERM ─────────────────────────────────────────────────────────────────────
+const term = new Terminal({
+  theme:{background:'#11111b',foreground:'#cdd6f4',cursor:'#89b4fa',selectionBackground:'rgba(137,180,250,.3)'},
+  fontFamily:"'JetBrains Mono',monospace", fontSize:13, lineHeight:1.4,
+  cursorBlink:true, scrollback:2000,
 });
+const fitAddon = new FitAddon.FitAddon();
+term.loadAddon(fitAddon);
+term.open(document.getElementById('terminal'));
+fitAddon.fit();
+window.addEventListener('resize', ()=>fitAddon.fit());
 
-// ── SIDEBAR ───────────────────────────────────────────────────────────────────
-function buildSidebar() {
-  const list = document.getElementById('lessonList');
-  list.innerHTML = LESSONS.map((l, i) => `
-    <div class="li ${i===0?'active':''}" id="li_${i}" onclick="selectLesson(${i})">
-      <span class="lnum">${i+1}</span>
-      <span>${l.icon} ${l.title}</span>
-      <span class="chk" id="chk_${i}" style="display:none">✓</span>
-    </div>`).join('');
-}
+// ── SHARED BUFFER (stdin bridge) ──────────────────────────────────────────────
+// Layout: [0]=status(0=idle,1=waiting,2=ready), [1]=textLen, [8+]=text bytes
+const sharedBuf = new SharedArrayBuffer(8200);
+const statusArr = new Int32Array(sharedBuf, 0, 2);
+const textArr   = new Uint8Array(sharedBuf, 8);
 
-function selectLesson(i) {
-  document.querySelectorAll('.li').forEach(el => el.classList.remove('active'));
-  document.getElementById(`li_${i}`).classList.add('active');
-  currentLesson = i;
-  const l = LESSONS[i];
-  editor.setValue(l.code);
-  document.getElementById('theoryText').innerHTML = l.theory;
-  document.getElementById('challengeBox').innerHTML = `<strong>💡 Challenge</strong>${l.challenge}`;
-  clearOutput();
-}
+// ── WORKER ────────────────────────────────────────────────────────────────────
+const worker = new Worker('./pyworker.js');
+worker.postMessage({type:'init', data:{sharedBuf}});
 
-function updateProgress() {
-  const n = completed.size, t = LESSONS.length;
-  document.getElementById('progText').textContent = `${n}/${t} lessons`;
-  document.getElementById('progFill').style.width = `${Math.round(n/t*100)}%`;
-}
+worker.onmessage = function(e) {
+  const {type, text} = e.data;
+  if (type === 'ready') {
+    setStatus('ok');
+    document.getElementById('btnRun').disabled = false;
+    term.writeln('\x1b[32m✓ Python ready. Press Run or Ctrl+Enter.\x1b[0m');
+  }
+  if (type === 'stdout') term.write(text.replace(/\n/g,'\r\n'));
+  if (type === 'stderr') term.write('\x1b[31m' + text.replace(/\n/g,'\r\n') + '\x1b[0m');
+  if (type === 'done') {
+    accepting = false;
+    term.writeln('\x1b[90m\r\n** Process exited - Return Code: 0 **\x1b[0m');
+    setStatus('ok');
+    document.getElementById('btnRun').disabled = false;
+    done.add(current);
+    document.getElementById('ck_'+current).style.display='';
+    updateProg();
+  }
+};
 
-// ── THEORY TOGGLE ─────────────────────────────────────────────────────────────
-function toggleTheory() {
-  theoryOpen = !theoryOpen;
-  document.getElementById('theoryPanel').classList.toggle('open', theoryOpen);
-  document.getElementById('btnTheory').textContent = theoryOpen ? '✕ Close' : '📖 Lesson';
-}
+// ── TERMINAL INPUT ────────────────────────────────────────────────────────────
+let inputBuf = '';
+let accepting = false;
 
-// ── OUTPUT ────────────────────────────────────────────────────────────────────
-function clearOutput() {
-  document.getElementById('outputBody').innerHTML = '<span class="info">Run your code to see output here…</span>';
-  document.getElementById('execTime').textContent = '';
-}
-
-function setOutput(stdout, stderr, ms) {
-  const body = document.getElementById('outputBody');
-  let html = '';
-  if (stdout) html += `<span class="stdout">${escHtml(stdout)}</span>`;
-  if (stderr) html += `<span class="stderr">${escHtml(stderr)}</span>`;
-  if (!stdout && !stderr) html = '<span class="info">(no output)</span>';
-  body.innerHTML = html;
-  document.getElementById('execTime').textContent = `⏱ ${ms.toFixed(1)} ms`;
-}
-
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ── RUN CODE ──────────────────────────────────────────────────────────────────
-async function runCode() {
-  if (!pyodide) return;
-  const code = editor.getValue();
-  setStatus('running');
-  const btn = document.getElementById('btnRun');
-  btn.disabled = true;
-
-  const t0 = performance.now();
-  let stdout = '', stderr = '';
-
-  try {
-    // Override input() to use browser prompt() — fixes the OSError
-    pyodide.globals.set('_js_prompt', (msg) => {
-      const result = window.prompt(msg || '');
-      return result === null ? '' : result;
-    });
-
-    // Redirect stdout/stderr and patch input()
-    await pyodide.runPythonAsync(`
-import sys, io, builtins
-_buf = io.StringIO()
-sys.stdout = _buf
-sys.stderr = _buf
-# Replace input() with browser prompt so interactive programs work
-builtins.input = lambda prompt='': _js_prompt(str(prompt))
-`);
-    try {
-      await pyodide.runPythonAsync(code);
-    } catch(e) {
-      stderr = e.message || String(e);
+// Poll for when Pyodide is waiting for stdin
+let pollTimer = null;
+function startPoll() {
+  pollTimer = setInterval(()=>{
+    if (Atomics.load(statusArr,0) === 1 && !accepting) {
+      accepting = true;
+      term.write('\x1b[33m\x1b[0m'); // show cursor ready
     }
-    stdout = pyodide.globals.get('_buf').getvalue();
-    // Restore stdout/stderr (input() stays patched for this session)
-    await pyodide.runPythonAsync(`sys.stdout=sys.__stdout__;sys.stderr=sys.__stderr__`);
-  } catch(e) {
-    stderr = String(e);
-  }
-
-  const ms = performance.now() - t0;
-  setOutput(stdout, stderr, ms);
-  setStatus('ready');
-  btn.disabled = false;
-
-  if (!stderr) {
-    completed.add(currentLesson);
-    document.getElementById(`chk_${currentLesson}`).style.display = '';
-    updateProgress();
-  }
+  }, 30);
+}
+function stopPoll() {
+  clearInterval(pollTimer);
+  accepting = false;
 }
 
-// ── DOWNLOAD ─────────────────────────────────────────────────────────────────
-function downloadCode() {
-  const blob = new Blob([editor.getValue()], {type:'text/plain'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'pyforge_code.py';
+term.onKey(({key, domEvent}) => {
+  if (!accepting) return;
+  const code = domEvent.keyCode;
+  if (code === 13) { // Enter
+    term.write('\r\n');
+    const encoded = new TextEncoder().encode(inputBuf + '\n');
+    textArr.set(encoded);
+    Atomics.store(statusArr, 1, encoded.length);
+    Atomics.store(statusArr, 0, 2);
+    Atomics.notify(statusArr, 0, 1);
+    inputBuf = '';
+    accepting = false;
+  } else if (code === 8) { // Backspace
+    if (inputBuf.length > 0) {
+      inputBuf = inputBuf.slice(0,-1);
+      term.write('\b \b');
+    }
+  } else if (key && !domEvent.ctrlKey && !domEvent.metaKey) {
+    inputBuf += key;
+    term.write(key);
+  }
+});
+
+// ── RUN ───────────────────────────────────────────────────────────────────────
+function runCode() {
+  const code = cm.getValue();
+  term.clear();
+  inputBuf = '';
+  Atomics.store(statusArr, 0, 0);
+  setStatus('run');
+  document.getElementById('btnRun').disabled = true;
+  startPoll();
+  worker.postMessage({type:'run', data:{code}});
+}
+
+function clearTerm() { term.clear(); }
+
+function dlCode() {
+  const a = Object.assign(document.createElement('a'),{
+    href: URL.createObjectURL(new Blob([cm.getValue()],{type:'text/plain'})),
+    download: 'pyforge_code.py'
+  });
   a.click();
 }
 
 // ── STATUS ────────────────────────────────────────────────────────────────────
-function setStatus(state) {
-  const pill = document.getElementById('statusPill');
-  const dot = document.getElementById('statusDot');
-  const txt = document.getElementById('statusText');
-  pill.className = 'pill ' + state;
-  dot.className = 'dot' + (state!=='ready'?' pulse':'');
-  txt.textContent = state==='loading'?'Loading Python…':state==='running'?'Running…':'Python Ready';
+function setStatus(s) {
+  const pill=document.getElementById('pill'), dot=document.getElementById('pdot'), txt=document.getElementById('ptxt');
+  pill.className='pill '+s;
+  dot.className='dot'+(s!=='ok'?' anim':'');
+  txt.textContent={load:'Loading Python…',ok:'Python Ready',run:'Running…'}[s]||s;
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-buildSidebar();
-selectLesson(0);
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function buildSidebar() {
+  document.getElementById('lessons').innerHTML = LESSONS.map((l,i)=>`
+    <div class="li${i===0?' on':''}" id="li_${i}" onclick="pick(${i})">
+      <span class="n">${i+1}</span>${l.icon} ${l.title}
+      <span class="ck" id="ck_${i}" style="display:none">✓</span>
+    </div>`).join('');
+}
+function pick(i) {
+  document.querySelectorAll('.li').forEach(e=>e.classList.remove('on'));
+  document.getElementById('li_'+i).classList.add('on');
+  current = i;
+  cm.setValue(LESSONS[i].code);
+}
+function updateProg() {
+  const n=done.size,t=LESSONS.length;
+  document.getElementById('prog').textContent=`${n}/${t} lessons`;
+  document.getElementById('pf').style.width=`${Math.round(n/t*100)}%`;
+}
 
-(async () => {
-  setStatus('loading');
-  try {
-    pyodide = await loadPyodide();
-    setStatus('ready');
-    document.getElementById('btnRun').disabled = false;
-  } catch(e) {
-    document.getElementById('statusText').textContent = 'Load failed — refresh';
-  }
-})();
+buildSidebar();
+cm.setValue(LESSONS[0].code);
 </script>
 </body>
 </html>
