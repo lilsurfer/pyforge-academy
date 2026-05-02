@@ -427,12 +427,20 @@ async function runCode() {
   let stdout = '', stderr = '';
 
   try {
-    // Redirect stdout/stderr
+    // Override input() to use browser prompt() — fixes the OSError
+    pyodide.globals.set('_js_prompt', (msg) => {
+      const result = window.prompt(msg || '');
+      return result === null ? '' : result;
+    });
+
+    // Redirect stdout/stderr and patch input()
     await pyodide.runPythonAsync(`
-import sys, io
+import sys, io, builtins
 _buf = io.StringIO()
 sys.stdout = _buf
 sys.stderr = _buf
+# Replace input() with browser prompt so interactive programs work
+builtins.input = lambda prompt='': _js_prompt(str(prompt))
 `);
     try {
       await pyodide.runPythonAsync(code);
@@ -440,7 +448,7 @@ sys.stderr = _buf
       stderr = e.message || String(e);
     }
     stdout = pyodide.globals.get('_buf').getvalue();
-    // Restore
+    // Restore stdout/stderr (input() stays patched for this session)
     await pyodide.runPythonAsync(`sys.stdout=sys.__stdout__;sys.stderr=sys.__stderr__`);
   } catch(e) {
     stderr = String(e);
